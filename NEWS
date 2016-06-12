@@ -1,0 +1,51 @@
+-*- text -*-
+
+This is the 'NEWS' file for the 'ads-clock' project. This file contains
+information on changes since the last release of the package, as well as a
+running list of high-level changes from previous versions.  If critical bugs
+are found in any of the software, notice of such bugs and the versions in
+which they were fixed will be noted here, as well.
+
+-----------------------------------------------------------------------
+
+ads-clock 0.1.0 (TBD)
+
+    * Initial version of project. The project currently provides two command
+      line programs: `ads-clock` and `ads-clock-once`.
+
+      + ads-clock-once: prints a "single tick" of a large (non-ugly, it is
+        hoped) clock in your terminal window. The date displayed in the fixed
+        format:
+
+            YYYY-MM-DD HH:mm:ssSOO:oo
+
+        where
+
+            YYYY means date fullyear (4 digits); 0000-9999
+              MM means date month    (2 digits); 01-12
+              DD means date mday     (2 digits); 01-28, 01-29, 01-30, 01-31 based on month/year
+
+              HH means time hour     (2 digits); 00-23
+              mm means time minute   (2 digits); 00-59
+              ss means time second   (2 digits); 00-58, 00-59, 00-60 based on leap second rules
+
+               S means one of the signs '+' or '-'
+
+              OO means time hours offset from UTC
+              oo means time minuts offset from UTC
+
+        which is compliant with RFC 3336 (mainly a "profile" of ISO-8601,
+        except that it allows a space rather than a 'T' to separate dates from
+        times).
+
+        The 'HH:mm:ss' portion of the display is shown in cyan to have it
+        stand out from the surrounding text. That works pretty well, assuming
+        the default color of your terminal text is not cyan. No facility is
+        provided in this initial version to control the color.
+
+      + ads-clock: is the driver program, and the only one of the two that is
+        intended to be invoked directly by the user. It uses `watch(1)` to
+        invoke `ads-clock-one` every second, which produces the effect of a
+        clock on the terminal updating every second.
+
+-----------------------------------------------------------------------
