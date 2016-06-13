@@ -227,6 +227,11 @@ header ul li + li {
   width: 100%;
 }
 
+.li-downloads-archive-link {
+  border-right:none;
+  width: 100%;
+}
+
 header ul a strong {
   font-size:14px;
   display:block;
