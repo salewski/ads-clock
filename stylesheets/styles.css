@@ -217,9 +217,9 @@ header ul li + li + li {
   width:89px;
 }
 
-header ul li + li {
+header ul li .li-tarball-link {
   border-right:none;
-  width:133px;
+  width: 100%;
 }
 
 header ul a strong {
