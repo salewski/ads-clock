@@ -217,7 +217,12 @@ header ul li + li + li {
   width:89px;
 }
 
-header ul li .li-tarball-link {
+header ul li + li {
+  border-right:none;
+  width: 133px;
+}
+
+.li-tarball-link {
   border-right:none;
   width: 100%;
 }
@@ -321,6 +326,10 @@ footer {
 
   header li, header ul li + li {
     width:50%;
+  }
+
+  header li, header ul li {
+    width:100%;
   }
 }
 
