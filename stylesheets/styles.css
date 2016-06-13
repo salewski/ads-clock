@@ -217,6 +217,11 @@ header ul li + li + li {
   width:89px;
 }
 
+header ul li + li {
+  border-right:none;
+  width:133px;
+}
+
 header ul a strong {
   font-size:14px;
   display:block;
