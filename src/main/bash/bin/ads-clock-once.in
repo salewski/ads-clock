@@ -1,4 +1,5 @@
-#!/bin/bash -
+#!@BASH_SH@ -
+# @configure_input@
 
 # Copyright (c) 2016 Alan D. Salewski <salewski@att.net>
 #
@@ -16,25 +17,70 @@
 #     along with this program; if not, write to the Free Software Foundation,
 #     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301,, USA.
 
-# ads-clock-once: FIXME: document script
+# ads-clock-once: Intended to be invoked by the 'ads-clock' program; produces
+# output for a "single tick" of the clock on the terminal.
 #
+# See the man page ads-clock(1) or run the 'perldoc' command on this file to
+# read the full documentation.
 
 declare -r PROG='ads-clock-once'
 
 
 # FIXME: one day this will be filtered in at build time
-declare -r MAINTAINER='Alan D. Salewski <salewski@att.net>'
+# declare -r MAINTAINER='Alan D. Salewski <salewski@att.net>'
+declare -r MAINTAINER='@PACKAGE_BUGREPORT@'
 
 # FIXME: one day this will be filtered in at build time
-declare -r VERSION='0.0.1'
+# declare -r VERSION='0.0.1'
+declare -r VERSION='@VERSION@'
+
 
 # FIXME: one day this will be filtered in at build time
 # This variable is replaced at build time
-# declare -r gl_const_build_date='@BUILD_DATE@'
-# declare -r gl_const_release="${VERSION}  (built: ${gl_const_build_date})"
-declare -r gl_const_release="${VERSION}"
+declare -r gl_const_build_date='@BUILD_DATE@'
+declare -r gl_const_release="${VERSION}  (built: ${gl_const_build_date})"
+# declare -r gl_const_release="${VERSION}"
 
 BE_VERBOSE=false
+
+# This one implies BE_VERBOSE, too
+DEBUGGING=false  # debug-level output; override with two '-v' opts
+
+
+# By default we'll use the external programs found at configure-time. But we
+# allow the user to override any particular tool by setting an environment
+# variable named after the tool (with hyphen chars changed to underscores).
+
+CAT_PROG="${CAT:-@CAT@}"
+EXPR_PROG="${EXPR:-@EXPR_PROG@}"
+
+# The 'toilet' program (from the TOIlet project) is the heart of the ads-clock
+# display. The description from the upstream web site:
+# <quote>
+#     The TOIlet project attempts to create a free replacement for the ​FIGlet
+#     utility. TOIlet stands for “The Other Implementation’s letters”, coined
+#     after FIGlet’s “Frank, Ian and Glen’s letters”.
+# </quote>
+# 
+# See:
+#     http://caca.zoy.org/wiki/toilet
+#
+TOILET_PROG="${TOILET:-@TOILET_PROG@}"
+
+# The 'tput' program comes from 'ncurses'.
+#
+# See:
+#     http://invisible-island.net/ncurses/
+#
+# On Debian systems the 'tput' program is provided by the 'nurses-bin' package
+# (source package name: 'ncurses')
+#
+TPUT_PROG="${TPUT:-@TPUT_PROG@}"
+
+declare -a NEEDED_EXTERNAL_PROGS=(
+    "${TPUT_PROG}"
+    "${EXPR_PROG}"
+)
 
 
 declare -a F_CLEANUP_HOOK_NAMES=()
@@ -85,11 +131,23 @@ trap 'printf "$PROG (warn): TERM signal caught; bailing out\n" 1>&2; f_cleanup_a
 
 trap 'f_cleanup' EXIT
 
+for ext_tool in "${NEEDED_EXTERNAL_PROGS[@]}"; do
+
+    t_path=$(builtin type -p "${ext_tool}")
+    if test $? -ne 0; then
+        printf "${PROG} (error): was unable to locate \"%s\" on PATH; bailing out\n" "${ext_tool}" 1>&2
+        exit 1
+    fi
+
+    if $DEBUGGING; then
+        printf "${PROG} (debug): path to external tool \"%s\": %s\n" "${ext_tool}" "${t_path}" 1>&2
+    fi
+done
 
 
 f_print_help () {
 
-    cat <<EOF
+    "${CAT_PROG}" <<EOF
 usage: $PROG [OPTION...]
 Prints one clock tick on stdout; intended to be invoked from ads-clock(1)
 
@@ -103,7 +161,7 @@ EOF
 }
 
 f_print_version () {
-    cat <<EOF
+    "${CAT_PROG}" <<EOF
 ${PROG} ${gl_const_release}
 Copyright (C) 2016 Alan D. Salewski
 License GPLv2+: GNU GPL version 2 or later <http://gnu.org/licenses/gpl.html>.
@@ -117,12 +175,12 @@ EOF
 
 while test $# -gt 0 ; do
 
-    option=$(expr "x$1" : 'x\(--[^=]*\)' \| \
-                  "x$1" : 'x\(-.\)'      \| \
-                  "x$1" : 'x\(.*\)')
+    option=$("${EXPR_PROG}" "x$1" : 'x\(--[^=]*\)' \| \
+                            "x$1" : 'x\(-.\)'      \| \
+                            "x$1" : 'x\(.*\)')
 
-    optarg=$(expr "x$1" : 'x--[^=]*=\(.*\)' \| \
-                  "x$1" : 'x-.\(.*\)')
+    optarg=$("${EXPR_PROG}" "x$1" : 'x--[^=]*=\(.*\)' \| \
+                            "x$1" : 'x-.\(.*\)')
 
     case $1 in
 
@@ -140,13 +198,24 @@ while test $# -gt 0 ; do
 
         --verbose | -v )
             # Accumulating 'verbose' opt. A single -v opt simply turns
-            # BE_VERBOSE on; two or more '-v' opts turns tracing on. Note that
-            # if you intend to turn tracing on, you'll probably want your -v
-            # opts to be the first opts on the command line (so they take
-            # effect earlier).
+            # BE_VERBOSE on (info level output); two '-v' opts turns on
+            # $DEBUGGING (debug level output); three or more '-v' opts turns
+            # tracing on. Note that if you intend to turn tracing on, you'll
+            # probably want your -v opts to be the first opts on the command
+            # line (so they take effect earlier).
+            #
             if $BE_VERBOSE; then
-                # We've seen at least one -v opt before, so now we're turning tracing on
-                set -x
+
+                # We've seen at least one -v opt before; if this is the second
+                # we'll turn on debugging mode, but if it's the third or
+                # greater then we'll turn tracing on
+                if $DEBUGGING; then
+                    # We've seen at least two -v opts before, so now we're turning tracing on
+                    set -x
+                else
+                    # Second -v opt we're seeing
+                    DEBUGGING=true
+                fi
             else
                 # First -v opt we're seeing
                 BE_VERBOSE=true
@@ -224,19 +293,17 @@ export COLOR_BRIGHT_MAGENTA="${CSI}1;35m"
 export COLOR_CYAN="${CSI}0;36m"
 export COLOR_BRIGHT_CYAN="${CSI}1;36m"
 
-t_cols=$(tput cols)
+t_cols=$("${TPUT_PROG}" cols)
 if test $? -ne 0; then
     printf "${PROG} (error): was unable to determine number of available terminal columns; bailing out\n" 1>&2
     exit 1
 fi
 
-t_rows=$(tput lines)
+t_rows=$("${TPUT_PROG}" lines)
 if test $? -ne 0; then
     printf "${PROG} (error): was unable to determine number of available terminal lines; bailing out\n" 1>&2
     exit 1
 fi
-
-TOILET_PROG='toilet'
 
 declare -a MY_TOILET_OPTS=()
 
@@ -307,7 +374,8 @@ row_start=$(( ( ${t_rows} - ${height_in_rows_of_data} ) / 2 ))
 col_start=$(( ( ${t_cols} - ${width_longest_line} ) / 2 ))
 
 left_pad_spaces=''
-for nn in $(seq 1 $col_start); do
+# for nn in $(seq 1 $col_start); do
+for (( ii=0; ii<col_start; ++ii )); do
     left_pad_spaces="${left_pad_spaces} "
 done
 
@@ -315,7 +383,7 @@ done
 # use case), but is nice to have here, too, for nicer output when invoking
 # directly.
 #
-tput clear
+"${TPUT_PROG}" clear
 if test $? -ne 0; then
     printf "${PROG} (error): was unable to clear terminal; bailing out\n" 1>&2
     exit 1
@@ -331,11 +399,150 @@ fi
 #     printf "${PROG} (error): was unable to position cursor on starting output row; bailing out\n" 1>&2
 #     exit 1
 # fi
-for nn in $(seq 1 $row_start); do
-    echo
+# for nn in $(seq 1 $row_start); do
+for (( ii=0; ii<row_start; ++ii )); do
+    printf '\n'
 done
 
 for t_one_line in "${combined_lines[@]}"; do
 
     echo -e "${left_pad_spaces}${t_one_line}"
 done
+
+exit 0
+
+
+#
+# ----------------------------------------------------------------------------
+# Documentation
+#
+# The docs are in Perl's POD format, so you can run either the 'perldoc' or
+# 'pod2man' programs on this file to produce a man page.
+#
+# To generate a man page for distribution (in a tarball or RPM, for instance),
+# you'll probably want to run pod2man something like this:
+#
+#     $ pod2man /path/to/this/file \
+#               --center='ads-clock' \
+#               --release='ads-clock-0.1.0' \
+#               --section='1' \
+#               > /outputdir/ads-clock-once.1
+#
+# To inspect the page formatting, etc., you can pipe the above 'pod2man'
+# command to:
+#
+#     'man -l -'
+#
+# instead of redirecting the output to a file.
+#
+# ----------------------------------------------------------------------------
+
+=pod
+
+=head1 NAME
+
+  ads-clock-once - produces single clock tick output to terminal
+
+
+=head1 SYNOPSIS
+
+  ads-clock-once --help
+  ads-clock-once --version
+
+  ads-clock-once [OPTION...]
+
+
+=head1 DESCRIPTION
+
+The C<ads-clock-once> program is part of the C<ads-clock> project.
+
+The C<ads-clock-once> program produces output for a "single tick" of the clock
+on the terminal.
+
+The program is not intended to be invoked directly by users, but rather
+(repeatedly) by the L<ads-clock(1)> program.
+
+
+=head1 OPTIONS
+
+Below are the command line options currently accepted by
+C<ads-clock-once>.
+
+
+=over 4
+
+=item -h, --help
+
+Print help usage message
+
+
+=item -V, --version
+
+Print the version of the program to stdout and then exit.
+
+
+=item -v, --verbose
+
+Turn on verbose mode. Causes program to emit messages on C<stderr> indicating
+what it is doing. The option may be specified multiple times to increase
+fruther the level of verbosity. One C<-v> option enables info-level output;
+two such opts enable debug-level output; three or more enable trace-level
+output.
+
+
+=item --
+
+Signals the end of options and disables further options processing.
+
+=back
+
+
+=head1 DIAGNOSTICS
+
+Exits with zero on success, non-zero on error.
+
+
+=head1 BUGS
+
+=over 4
+
+=item Probably tons
+
+If you find any, please report them as described in the C<BUGS> file.
+
+=back
+
+
+=head1 SEE ALSO
+
+=over 4
+
+=item ads-clock(1)
+
+=item ads-clock project page on GitHub
+
+L<https://github.com/salewski/ads-clock>
+
+=back
+
+
+=head1 AUTHOR
+
+=over 4
+
+=item Alan D. Salewski  <salewski@att.net>
+
+=back
+
+
+=head1 COPYRIGHT
+
+Copyright 2016 Alan D. Salewski
+
+=cut
+
+
+# Local Variables:
+#     mode: sh
+#     eval: (sh-set-shell "bash" t nil)
+# End:
