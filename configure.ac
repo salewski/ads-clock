@@ -18,7 +18,7 @@ dnl     [AC_]PACKAGE_BUGREPORT
 dnl     [AC_]PACKAGE_URL
 dnl
 AC_INIT([[ADS Clock]],
-        [[0.1.0-snapshot]],
+        [[0.1.0]],
         [[Alan D. Salewski <salewski@att.net>]],
         [[ads-clock]],
         [[https://github.com/salewski/ads-clock]])
